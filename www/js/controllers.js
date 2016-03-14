@@ -1,45 +1,131 @@
-angular.module('starter.controllers', ['firebase'])
+angular.module('sociogram.controllers', [])
 
-.controller('LoginCtrl', LoginCtrl)
+    .controller('AppCtrl', function ($scope, $state, OpenFB) {
 
-.controller('DashCtrl', DashCtrl)
+        $scope.logout = function () {
+            OpenFB.logout();
+            $state.go('app.login');
+        };
 
-.controller('ChatsCtrl', ChatsCtrl)
+        $scope.revokePermissions = function () {
+            OpenFB.revokePermissions().then(
+                function () {
+                    $state.go('app.login');
+                },
+                function () {
+                    alert('Revoke permissions failed');
+                });
+        };
 
-.controller('ChatDetailCtrl', ChatDetailCtrl)
+    })
 
-.controller('AccountCtrl', AccountCtrl);
+    .controller('LoginCtrl', function ($scope, $location, OpenFB) {
 
-function LoginCtrl(Auth, $state) {
+        $scope.facebookLogin = function () {
 
-  this.loginWithFacebook = function loginWithFacebook() {
-    Auth.$authWithOAuthPopup('facebook')
-      .then(function(authData) {
-        $state.go('tab.dash');
-      });
-  };
+            OpenFB.login('email,public_profile,user_friends,user_photos,user_posts,publish_actions,user_birthday,read_custom_friendlists').then(
+                function () {
+                    $location.path('/app/person/me/feed');
+                },
+                function () {
+                    alert('OpenFB login failed');
+                });
+        };
 
-}
-LoginCtrl.$inject = ['Auth', '$state'];
+    })
 
-function DashCtrl() {}
+    .controller('ShareCtrl', function ($scope, OpenFB) {
 
-function ChatsCtrl($scope, Chats) {
-  $scope.chats = Chats.all();
-  $scope.remove = function(chat) {
-    Chats.remove(chat);
-  };
-}
-ChatsCtrl.$inject = ['$scope', 'Chats'];
+        $scope.item = {};
 
-function ChatDetailCtrl($scope, $stateParams, Chats) {
-  $scope.chat = Chats.get($stateParams.chatId);
-}
-ChatDetailCtrl.$inject = ['$scope', '$stateParams', 'Chats'];
+        $scope.share = function () {
+            OpenFB.post('/me/feed', $scope.item)
+                .success(function () {
+                    $scope.status = "This item has been shared on OpenFB";
+                })
+                .error(function(data) {
+                    alert(data.error.message);
+                });
+        };
 
-function AccountCtrl($scope) {
-  $scope.settings = {
-    enableFriends: true
-  };
-}
-AccountCtrl.$inject = ['$scope'];
+    })
+
+    .controller('ProfileCtrl', function ($scope, OpenFB) {
+        OpenFB.get('/me?fields=id,name,email,birthday').success(function (user) {
+            $scope.user = user;
+        });
+    })
+
+    .controller('PersonCtrl', function ($scope, $stateParams, OpenFB) {
+        OpenFB.get('/' + $stateParams.personId + '?fields=id,name,email,birthday').success(function (user) {
+            $scope.user = user;
+        });
+    })
+
+    .controller('FriendsCtrl', function ($scope, $stateParams, OpenFB) {
+        OpenFB.get('/' + $stateParams.personId + '/friendlists', {limit: 50})
+            .success(function (result) {
+                $scope.friends = result.data;
+            })
+            .error(function(data) {
+                alert(data.error.message);
+            });
+    })
+
+    .controller('AllFriendsCtrl', function ($scope, $stateParams, OpenFB) {
+        OpenFB.get('/' + $stateParams.personId + '/taggable_friends', {limit: 50})
+            .success(function (result) {
+                $scope.friends = result.data;
+            })
+            .error(function(data) {
+                alert(data.error.message);
+            });
+    })
+
+    .controller('MutualFriendsCtrl', function ($scope, $stateParams, OpenFB) {
+        OpenFB.get('/' + $stateParams.personId + '?fields=context.fields%28mutual_friends%29', {limit: 50})
+            .success(function (result) {
+                OpenFB.get('/' + result.context.id, {limit: 50})
+                    .success(function (result) {
+                      $scope.friends = result.mutual_friends.data;
+                    })
+                    .error(function(data) {
+                        alert(data.error.message);
+                    });
+            })
+            .error(function(data) {
+                alert(data.error.message);
+            });
+    })
+
+    .controller('FeedCtrl', function ($scope, $stateParams, OpenFB, $ionicLoading) {
+
+        $scope.show = function() {
+            $scope.loading = $ionicLoading.show({
+                content: 'Loading feed...'
+            });
+        };
+        $scope.hide = function(){
+            $scope.loading.hide();
+        };
+
+        function loadFeed() {
+            $scope.show();
+            OpenFB.get('/me/feed', {limit: 30})
+                .success(function (result) {
+                    $scope.hide();
+                    $scope.items = result.data;
+                    // Used with pull-to-refresh
+                    $scope.$broadcast('scroll.refreshComplete');
+                })
+                .error(function(data) {
+                    $scope.hide();
+                    alert(data.error.message);
+                });
+        }
+
+        $scope.doRefresh = loadFeed;
+
+        loadFeed();
+
+    });
