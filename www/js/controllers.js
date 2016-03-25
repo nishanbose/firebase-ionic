@@ -23,7 +23,7 @@ angular.module('sociogram.controllers', [])
 
         $scope.facebookLogin = function () {
 
-            OpenFB.login('email,public_profile,user_friends,user_photos,user_posts,publish_actions,user_birthday,read_custom_friendlists').then(
+            OpenFB.login('email,public_profile,user_friends,user_photos,user_posts,publish_actions,publish_pages,user_birthday,read_custom_friendlists').then(
                 function () {
                     $location.path('/app/person/me/feed');
                 },
@@ -63,7 +63,7 @@ angular.module('sociogram.controllers', [])
     })
 
     .controller('FriendsCtrl', function ($scope, $stateParams, OpenFB) {
-        OpenFB.get('/' + $stateParams.personId + '/friendlists', {limit: 50})
+        OpenFB.get('/' + $stateParams.personId + '/friends?fields=id,name', {limit: 500})
             .success(function (result) {
                 $scope.friends = result.data;
             })
@@ -73,7 +73,7 @@ angular.module('sociogram.controllers', [])
     })
 
     .controller('AllFriendsCtrl', function ($scope, $stateParams, OpenFB) {
-        OpenFB.get('/' + $stateParams.personId + '/taggable_friends', {limit: 50})
+        OpenFB.get('/' + $stateParams.personId + '/taggable_friends', {limit: 500})
             .success(function (result) {
                 $scope.friends = result.data;
             })
@@ -83,7 +83,7 @@ angular.module('sociogram.controllers', [])
     })
 
     .controller('MutualFriendsCtrl', function ($scope, $stateParams, OpenFB) {
-        OpenFB.get('/' + $stateParams.personId + '?fields=context.fields%28mutual_friends%29', {limit: 50})
+        OpenFB.get('/' + $stateParams.personId + '?fields=context.fields%28mutual_friends%29', {limit: 500})
             .success(function (result) {
                 OpenFB.get('/' + result.context.id, {limit: 50})
                     .success(function (result) {
@@ -111,7 +111,39 @@ angular.module('sociogram.controllers', [])
 
         function loadFeed() {
             $scope.show();
-            OpenFB.get('/me/feed', {limit: 30})
+            OpenFB.get('/me/feed?fields=id,from,picture,message,created_time,story,comments.limit(100),likes.limit(100)', {limit: 30, summary: true})
+                .success(function (result) {
+                    $scope.hide();
+                    $scope.items = result.data;
+                    // Used with pull-to-refresh
+                    $scope.$broadcast('scroll.refreshComplete');
+                })
+                .error(function(data) {
+                    $scope.hide();
+                    alert(data.error.message);
+                });
+        }
+
+        $scope.doRefresh = loadFeed;
+
+        loadFeed();
+
+    })
+
+    .controller('PhotosCtrl', function ($scope, $stateParams, OpenFB, $ionicLoading) {
+
+        $scope.show = function() {
+            $scope.loading = $ionicLoading.show({
+                content: 'Loading feed...'
+            });
+        };
+        $scope.hide = function(){
+            $scope.loading.hide();
+        };
+
+        function loadFeed() {
+            $scope.show();
+            OpenFB.get('/me/photos?fields=backdated_time,caption,picture,tags,from,created_time', {limit: 30, summary: true})
                 .success(function (result) {
                     $scope.hide();
                     $scope.items = result.data;

@@ -2,7 +2,7 @@ angular.module('sociogram', ['ionic', 'openfb', 'sociogram.controllers'])
 
     .run(function ($rootScope, $state, $ionicPlatform, $window, OpenFB) {
 
-        OpenFB.init('623251074481045');
+        OpenFB.init('532027693637133');
 
         $ionicPlatform.ready(function () {
             if (window.StatusBar) {
@@ -88,6 +88,15 @@ angular.module('sociogram', ['ionic', 'openfb', 'sociogram.controllers'])
                     'menuContent': {
                         templateUrl: "templates/mutual-friend-list.html",
                         controller: "MutualFriendsCtrl"
+                    }
+                }
+            })
+            .state('app.photos', {
+                url: "/person/:personId/photos",
+                views: {
+                    'menuContent': {
+                        templateUrl: "templates/photos.html",
+                        controller: "PhotosCtrl"
                     }
                 }
             })
