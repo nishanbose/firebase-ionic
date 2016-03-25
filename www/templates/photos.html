@@ -1,4 +1,4 @@
-<ion-view title="Feed" hide-back-button="true">
+<ion-view title="Photo" hide-back-button="true">
 
     <ion-nav-buttons side="left">
         <button menu-toggle="left" class="button button-icon icon ion-navicon"></button>
@@ -19,6 +19,11 @@
 
             </div>
             <div class="item item-body">
+              <img ng-src="{{item.picture}}"/>
+
+            </div>
+            <div class="item item-body">{{item}}</div>
+            <!-- <div class="item item-body">
                 <p ng-if="item.story">{{item.story}}</p>
 
                 <p>{{item.message}}</p>
@@ -36,7 +41,7 @@
                 </div>
 
                 <img ng-if="item.picture" ng-src="{{ item.picture }}"/>
-            </div>
+            </div> -->
 
         </div>
 
